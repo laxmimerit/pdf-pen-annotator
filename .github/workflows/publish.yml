@@ -47,7 +47,9 @@ env:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.60 can't install
+    # its browser for the eraser test. Move up when Playwright supports it.
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # creates the GitHub Release
       id-token: write # lets vsce get a short-lived Marketplace credential
