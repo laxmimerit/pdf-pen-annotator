@@ -989,34 +989,90 @@ function makeInkData(template, pointArrays) {
   };
 }
 
-// Replace an editor's strokes with new point sets (undoable). An empty
+// One eraser gesture (pointer down to pointer up) is ONE undo step.
+// While the gesture runs, each hit replaces an editor with a new editor that
+// holds the remaining strokes (or with nothing). The gesture remembers which
+// editors it removed and which it created; at pointer up a single command is
+// recorded whose undo puts every removed editor back and drops every created
+// one. Recording a command per hit (the old way) made Undo restore only a
+// sliver of a swipe, and hits that raced an unfinished replacement re-used
+// stale editors, so some erases could not be undone at all.
+let eraseGesture = null; // { removed: Set<editor>, created: Set<editor> }
+
+// Put an editor (back) on its page WITHOUT an undo entry of its own. When an
+// ink editor is placed on a page, PDF.js (InkEditor.onceAdded) records an
+// "editor added" undo step. For editors the eraser places, those hidden steps
+// would sit between the gesture commands, so an Undo click would remove an
+// invisible intermediate editor and appear to do nothing.
+function placeEditorSilently(editor) {
+  const layer = editor.parent || uiManager.getLayer?.(editor.pageIndex);
+  if (!layer) {
+    uiManager.rebuild(editor);
+    return;
+  }
+  const hadOwn = Object.prototype.hasOwnProperty.call(layer, "addUndoableEditor");
+  const own = layer.addUndoableEditor;
+  layer.addUndoableEditor = () => {};
+  try {
+    uiManager.rebuild(editor);
+  } finally {
+    if (hadOwn) layer.addUndoableEditor = own;
+    else delete layer.addUndoableEditor;
+  }
+}
+
+// Replace an editor's strokes with new point sets, inside a gesture. An empty
 // newPointSets deletes the editor outright.
-async function replaceEditorStrokes(entry, newPointSets) {
+async function replaceEditorStrokes(gesture, entry, newPointSets) {
   const { editor, data } = entry;
   const layer =
     editor.parent || uiManager.getLayer?.(editor.pageIndex) || null;
   if (!layer) return;
 
-  const newEditors = [];
+  let created = null;
   if (newPointSets.length) {
-    const newData = makeInkData(data, newPointSets);
-    const created = await layer.deserialize(newData);
-    if (created) newEditors.push(created);
+    created = await layer.deserialize(makeInkData(data, newPointSets));
   }
+  editor.remove();
+  if (created) placeEditorSilently(created);
 
-  const cmd = () => {
-    editor.remove();
-    for (const e of newEditors) uiManager.rebuild(e);
-  };
-  const undo = () => {
-    for (const e of newEditors) e.remove();
-    uiManager.rebuild(editor);
-  };
-  uiManager.addCommands({ cmd, undo, mustExec: true });
+  // An editor this same gesture created is just an intermediate step: drop it
+  // instead of remembering it, so undo restores the original editor.
+  if (gesture.created.has(editor)) gesture.created.delete(editor);
+  else gesture.removed.add(editor);
+  if (created) gesture.created.add(created);
+
+  eraserCache.delete(editor.pageIndex);
   markDirty();
 }
 
-function eraseHitsAt(clientX, clientY) {
+function finishEraseGesture(gesture) {
+  const removed = [...gesture.removed];
+  const created = [...gesture.created];
+  if (!removed.length && !created.length) return;
+  uiManager.addCommands({
+    cmd: () => {
+      for (const e of removed) e.remove();
+      for (const e of created) placeEditorSilently(e);
+    },
+    undo: () => {
+      for (const e of created) e.remove();
+      for (const e of removed) placeEditorSilently(e);
+    },
+    mustExec: false, // already applied hit by hit
+  });
+  eraserCache.clear();
+}
+
+// Hit-tests run on the queue, after every earlier replacement has finished,
+// so they always see the current editors.
+function queueErase(gesture, clientX, clientY) {
+  eraseQueue = eraseQueue
+    .then(() => eraseHitsAt(gesture, clientX, clientY))
+    .catch((err) => report(err?.message ?? err));
+}
+
+async function eraseHitsAt(gesture, clientX, clientY) {
   const pageEl = document
     .elementsFromPoint(clientX, clientY)
     .find((el) => el.classList?.contains("page"));
@@ -1072,15 +1128,9 @@ function eraseHitsAt(clientX, clientY) {
       });
     }
 
-    // Remove the entry from the cache now; it is rebuilt on the next hit.
-    eraserCache.delete(pageIndex);
-    eraseQueue = eraseQueue.then(() =>
-      replaceEditorStrokes(entry, newPointSets).catch((err) =>
-        report(err?.message ?? err)
-      )
-    );
-    // Only handle one editor per event; the cache rebuild after the queued
-    // replacement keeps subsequent hits consistent.
+    // One editor per hit; the cache is rebuilt from the current editors on
+    // the next hit, which runs only after this replacement finishes.
+    await replaceEditorStrokes(gesture, entry, newPointSets);
     break;
   }
 }
@@ -1095,9 +1145,11 @@ viewerWrapperEl.addEventListener(
     if (pendingTool !== "eraser") return;
     e.preventDefault();
     e.stopPropagation();
+    if (eraseGesture) endEraseGesture(); // a lost pointerup: close the old one
     erasing = true;
+    eraseGesture = { removed: new Set(), created: new Set() };
     eraserCache.clear();
-    eraseHitsAt(e.clientX, e.clientY);
+    queueErase(eraseGesture, e.clientX, e.clientY);
   },
   { capture: true }
 );
@@ -1107,20 +1159,26 @@ viewerWrapperEl.addEventListener(
   (e) => {
     if (pendingTool !== "eraser") return;
     e.stopPropagation();
-    if (erasing && isEraserGesturePressed(e)) {
-      eraseHitsAt(e.clientX, e.clientY);
+    if (erasing && eraseGesture && isEraserGesturePressed(e)) {
+      queueErase(eraseGesture, e.clientX, e.clientY);
     }
   },
   { capture: true }
 );
 
-window.addEventListener(
-  "pointerup",
-  () => {
-    erasing = false;
-  },
-  { capture: true }
-);
+function endEraseGesture() {
+  erasing = false;
+  const gesture = eraseGesture;
+  eraseGesture = null;
+  if (!gesture) return;
+  // Runs after the gesture's queued hits, so the command covers all of them.
+  eraseQueue = eraseQueue
+    .then(() => finishEraseGesture(gesture))
+    .catch((err) => report(err?.message ?? err));
+}
+
+window.addEventListener("pointerup", endEraseGesture, { capture: true });
+window.addEventListener("pointercancel", endEraseGesture, { capture: true });
 
 // Invalidate eraser geometry when strokes change (draw/undo/redo).
 // Also keep strokes deselected while a writing tool is active: PDF.js

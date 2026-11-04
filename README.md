@@ -65,7 +65,7 @@ To open a PDF in another viewer instead, right-click it and choose **Open Withâ€
 | **Eraser** | **Stroke** mode removes a whole stroke you touch. **Partial** mode wipes only what is under the eraser circle. Size 6 to 80. |
 | **Laser pointer** | Red glowing strokes for presenting. They fade after you stop drawing (1 to 15 seconds, set in its popover). Never saved. |
 | **Select / Pan** | Move around the page without drawing. |
-| **Undo / Redo** | Undo and redo your pen and highlighter strokes. |
+| **Undo / Redo** | Undo and redo every stroke and every erase. One eraser swipe is one undo step. |
 | **Clear** | Remove all annotations on this page, or in the whole file. |
 | **Find** | Search the text of the PDF, with next and previous match. |
 | **Sidebar** | Page thumbnails for quick jumps. |
@@ -93,7 +93,7 @@ The highlighter checks the page under each highlight. On a light page it darkens
 ### Eraser
 
 <p align="center">
-  <img src="media/readme/eraser.gif" width="900" alt="The eraser removes the underline, the circle and a handwritten note, one whole stroke at a time">
+  <img src="media/readme/eraser.gif" width="900" alt="The eraser removes the underline, the circle and a handwritten note, then Undo brings each one back">
 </p>
 
 ### Laser pointer
@@ -151,6 +151,7 @@ code .
 - Press **F5** to start an Extension Development Host, then open a PDF there.
 - `node dev/server.js` serves a browser test harness at http://localhost:8765 that loads `dev/test.pdf` without VS Code.
 - `npx @vscode/vsce package` builds the `.vsix`.
+- `python dev/test-eraser-undo.py` checks that Undo and Redo fully reverse the eraser (uses the harness).
 - `python dev/make-icon.py` redraws the logo. `python dev/record-readme.py all` re-records the README screenshots and GIFs.
 
 `media/pdf.mjs` carries one small change to PDF.js so a stylus and a mouse can be used one after the other. It is marked `PATCHED (pdf-pen-annotator)`; apply it again if you upgrade PDF.js.

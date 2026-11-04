@@ -7,7 +7,7 @@
 Scenes (output in media/readme/):
     pen            pen.gif           pick the pen, underline and circle, change colour in the popover, draw again
     highlighter    highlighter.gif   highlight lines in two colours, then on the dark panel
-    eraser         eraser.gif        erase whole strokes with the eraser
+    eraser         eraser.gif        erase whole strokes, then Undo brings them back
     laser          laser.gif         laser pointer strokes that fade on their own
     annotated      annotated.png     a page with pen and highlighter notes
     pen-options    pen-options.png   the pen colour and size popover
@@ -682,7 +682,6 @@ def scene_eraser(sc):
     park(sc, 0.1)
     time.sleep(0.8)
     sc.film.on = True
-    # Whole-stroke mode only: in this build Undo does not bring back a Partial erase, so the GIF does not show it.
     sc.hold(0.8)
     sc.caption("The eraser removes whole strokes")
     tool(sc, "eraser")
@@ -690,10 +689,12 @@ def scene_eraser(sc):
     sc.stroke([(x1 + 30, y - 26), (x1 + 60, y - 4)], speed=380, wobble=0)          # through the underline
     sc.stroke([(160, 222), (210, 300), (380, 228)], speed=520, wobble=0)            # through the circle
     sc.stroke([(168, 386), (200, 379), (236, 388)], speed=300, wobble=0, glide=0.5)  # through "key!"
-    # No Undo segment: in this build Undo after an erase restores only part of the ink (a known bug), so the GIF
-    # ends on the erased page. Add "Undo brings them back" here once that bug is fixed.
+    sc.hold(0.6)
+    sc.caption("Undo (Ctrl+Z) brings them back")
+    for _ in range(3):                    # one Undo per eraser swipe
+        sc.click("#btnUndo", secs=0.4, after=0.45)
     park(sc, 0.4)
-    sc.hold(1.2)
+    sc.hold(1.0)
 
 
 def scene_laser(sc):
