@@ -10,10 +10,13 @@
 </p>
 
 <p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=kgptalkie.pdf-pen-annotator"><img src="https://vsmarketplacebadges.dev/version-short/kgptalkie.pdf-pen-annotator.svg?label=VS%20Marketplace&color=0078d7&logo=visualstudiocode" alt="VS Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=kgptalkie.pdf-pen-annotator"><img src="https://vsmarketplacebadges.dev/installs-short/kgptalkie.pdf-pen-annotator.svg?color=2ea44f" alt="Installs"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=kgptalkie.pdf-pen-annotator&ssr=false#review-details"><img src="https://vsmarketplacebadges.dev/rating-star/kgptalkie.pdf-pen-annotator.svg?color=f5a623" alt="Rating"></a>
+  <a href="https://github.com/laxmimerit/pdf-pen-annotator/stargazers"><img src="https://img.shields.io/github/stars/laxmimerit/pdf-pen-annotator?style=flat&logo=github&color=24292f" alt="GitHub stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache 2.0 license"></a>
   <img src="https://img.shields.io/badge/VS%20Code-1.85%2B-007acc?logo=visualstudiocode&logoColor=white" alt="VS Code 1.85 or later">
   <img src="https://img.shields.io/badge/PDF.js-6.2-ef5b25?logo=mozilla&logoColor=white" alt="Built on PDF.js 6.2">
-  <img src="https://img.shields.io/badge/stylus-ready-2f9e44" alt="Stylus ready">
 </p>
 
 <p align="center">
@@ -41,12 +44,17 @@
 
 ## Install
 
-The extension isn't on the Marketplace yet. Install it from a `.vsix` file:
+**From the Marketplace:** search for **PDF Pen Annotator** in the Extensions view, or run:
 
-1. Get `pdf-pen-annotator-<version>.vsix` (or build it, see [Development](#development)).
-2. In VS Code open **Extensions → ··· → Install from VSIX…** and pick the file.
+```bash
+code --install-extension kgptalkie.pdf-pen-annotator
+```
 
-Or from a terminal: `code --install-extension pdf-pen-annotator-0.0.3.vsix`.
+**From a file:** download [pdf-pen-annotator.vsix](https://github.com/laxmimerit/pdf-pen-annotator/releases/latest/download/pdf-pen-annotator.vsix) (always the newest version, works on Windows, Mac and Linux), then in VS Code open **Extensions → ··· → Install from VSIX…**. Or from a terminal: `code --install-extension pdf-pen-annotator.vsix`. A file install doesn't update itself; install from the Marketplace once to get updates.
+
+All versions are on the [Releases page](https://github.com/laxmimerit/pdf-pen-annotator/releases).
+
+**Cursor, Windsurf, VSCodium and other VS Code-based editors:** install the file above the same way (Command Palette → **Extensions: Install from VSIX…**). The extension isn't on Open VSX, so their Extensions search won't find it.
 
 ## Quick start
 
@@ -126,6 +134,9 @@ On a Mac, use **Cmd** in place of **Ctrl**.
 
 ## FAQ
 
+**My PDFs open in another PDF viewer.**
+You have more than one PDF extension. Right-click a PDF, choose **Open With…**, then **Configure default editor for '*.pdf'…** and pick **PDF Pen Annotator**.
+
 **Can I use a pen tablet or a touch screen?**
 Yes. Pen, touch-screen stylus and mouse all draw. You can switch between the stylus and the mouse in the middle of your work.
 
@@ -150,9 +161,11 @@ code .
 
 - Press **F5** to start an Extension Development Host, then open a PDF there.
 - `node dev/server.js` serves a browser test harness at http://localhost:8765 that loads `dev/test.pdf` without VS Code.
-- `npx @vscode/vsce package` builds the `.vsix`.
+- `npx @vscode/vsce package --no-dependencies` builds the `.vsix`.
 - `python dev/test-eraser-undo.py` checks that Undo and Redo fully reverse the eraser (uses the harness).
 - `python dev/make-icon.py` redraws the logo. `python dev/record-readme.py all` re-records the README screenshots and GIFs.
+
+**Releasing:** set the new version in `package.json`, add its section to `CHANGELOG.md`, then push a matching tag (`git tag v1.0.1 && git push origin v1.0.1`). The `publish.yml` workflow tests the extension, publishes it to the Marketplace and attaches the `.vsix` to a GitHub Release.
 
 `media/pdf.mjs` carries one small change to PDF.js so a stylus and a mouse can be used one after the other. It is marked `PATCHED (pdf-pen-annotator)`; apply it again if you upgrade PDF.js.
 
@@ -169,5 +182,5 @@ Third-party software included in the extension (PDF.js, Adobe CMaps, Foxit and L
 The license covers the code, not the names. "PDF Pen Annotator", "KGP Talkie" and the PDF Pen Annotator logo are not licensed for use by forks. If you publish a fork, give it your own name and logo.
 
 <p align="center">
-  Made by <a href="https://www.youtube.com/kgptalkie">KGP Talkie</a> · If it helps you, please ⭐ the repo.
+  Made by <a href="https://www.youtube.com/kgptalkie">KGP Talkie</a> · If it helps you, please ⭐ the repo and rate it on the <a href="https://marketplace.visualstudio.com/items?itemName=kgptalkie.pdf-pen-annotator&ssr=false#review-details">Marketplace</a>.
 </p>

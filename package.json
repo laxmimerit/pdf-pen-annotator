@@ -1,6 +1,6 @@
 {
   "name": "pdf-pen-annotator",
-  "publisher": "local",
+  "publisher": "kgptalkie",
   "displayName": "PDF Pen Annotator",
   "description": "Draw and highlight on PDFs with mouse or stylus, directly in VS Code",
   "icon": "media/icon.png",
@@ -36,7 +36,7 @@
     "notes",
     "tablet"
   ],
-  "version": "0.0.4",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },

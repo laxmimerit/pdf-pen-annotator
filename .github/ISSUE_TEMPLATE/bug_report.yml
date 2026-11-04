@@ -1,0 +1,36 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Tool
+      options: [Pen, Highlighter, Eraser, Laser pointer, Undo / Redo, Saving (Ctrl+S), Opening a PDF, Find / thumbnails / zoom, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: input
+    attributes:
+      label: Drawing with
+      options: [Mouse, Pen tablet, Touch-screen stylus, Touch (finger), Not drawing related]
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Extension version, VS Code version and OS (Help → About).
+      placeholder: PDF Pen Annotator 1.0.0 · VS Code 1.105 · Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message or screenshot
+      description: If you can, attach the PDF or a page that shows the problem (only if it has nothing private in it).

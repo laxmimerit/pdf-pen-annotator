@@ -1,0 +1,142 @@
+# Publishes the extension to two places:
+#   - the VS Code Marketplace, for VS Code,
+#   - a GitHub Release, for installing from a file. Cursor, Windsurf, VSCodium
+#     and other VS Code-based editors install from here: the extension is not
+#     on Open VSX, by choice.
+#
+# Run it by pushing a version tag that matches package.json, for example:
+#   git tag v1.0.1 && git push origin v1.0.1
+# A tag push publishes to both. A manual run from the Actions tab (Run
+# workflow) has a tick box for each, for redoing one that failed; it uses the
+# version in package.json.
+#
+# The extension is plain JavaScript with no native parts, so one package works
+# on every system. Each GitHub Release also carries a copy without the version
+# in the name, so .../releases/latest/download/pdf-pen-annotator.vsix always
+# gives the newest version.
+#
+# No token is stored anywhere: the Marketplace trusts this workflow through
+# Trusted Publishing (OpenID Connect). The policy on the publisher page names
+# this repository and this file, publish.yml. Renaming the file breaks it.
+
+name: Publish to Marketplace
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      marketplace:
+        description: VS Code Marketplace
+        type: boolean
+        default: true
+      github_release:
+        description: GitHub Release
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+env:
+  VSCE: npx --yes @vscode/vsce@4.1.0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # creates the GitHub Release
+      id-token: write # lets vsce get a short-lived Marketplace credential
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Syntax check
+        shell: bash
+        run: |
+          node --check extension.js
+          cp media/main.js "$RUNNER_TEMP/main.mjs" && node --check "$RUNNER_TEMP/main.mjs"
+
+      # Draws, erases, undoes and saves in the browser test harness (dev/harness.html).
+      - name: Test the eraser and Undo
+        shell: bash
+        run: |
+          pip install playwright==1.60.0
+          python -m playwright install --with-deps chromium
+          python dev/test-eraser-undo.py
+
+      - name: Package
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          mkdir -p vsix
+          $VSCE package --no-dependencies -o "vsix/pdf-pen-annotator-$v.vsix"
+
+      - name: Keep the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: vsix/*.vsix
+          retention-days: 30
+
+      - name: Publish to the VS Code Marketplace
+        if: github.event_name == 'push' || inputs.marketplace
+        shell: bash
+        run: $VSCE publish --oidc --packagePath vsix/*.vsix
+
+      - name: GitHub Release
+        if: github.event_name == 'push' || inputs.github_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(node -p "require('./package.json').version")
+          tag="v$v"
+          repo="$GITHUB_REPOSITORY"
+
+          # A copy without the version, for the never-changing "latest" link.
+          mkdir -p latest
+          cp "vsix/pdf-pen-annotator-$v.vsix" latest/pdf-pen-annotator.vsix
+
+          # Release notes: how to install, then this version's CHANGELOG section.
+          {
+            echo "## Install"
+            echo
+            echo "Easiest: search **PDF Pen Annotator** in VS Code's Extensions view."
+            echo
+            echo "From a file (any system, also Cursor, Windsurf and VSCodium): download"
+            echo "[pdf-pen-annotator.vsix](https://github.com/$repo/releases/latest/download/pdf-pen-annotator.vsix),"
+            echo "then in VS Code open **Extensions → ··· → Install from VSIX…**"
+            echo
+            echo "## What's in $v"
+            awk -v h="## $v" '$0==h{on=1; next} on && /^## /{exit} on' CHANGELOG.md
+          } > notes.md
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" vsix/*.vsix latest/*.vsix --clobber
+            gh release edit "$tag" --notes-file notes.md
+          else
+            gh release create "$tag" vsix/*.vsix latest/*.vsix \
+              --verify-tag --title "PDF Pen Annotator $v" --notes-file notes.md
+          fi
