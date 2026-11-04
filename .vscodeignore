@@ -10,3 +10,6 @@ vsix/**
 media/readme/**
 debug.log
 PROMPT-LOG.md
+# Kept in the repository, left out of the package: the Marketplace has
+# rejected new extensions that ship a CHANGELOG.md as "suspicious content".
+CHANGELOG.md
