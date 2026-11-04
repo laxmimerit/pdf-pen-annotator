@@ -1,0 +1,611 @@
+* { box-sizing: border-box; }
+html, body {
+  /* VS Code injects default webview body padding (0 20px); reset it so the
+     toolbar and pages span the full editor width. */
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  background: #525659;
+  overflow: hidden;
+}
+
+:root {
+  --tb-bg:        var(--vscode-editorWidget-background, #1f1f1f);
+  --tb-border:    var(--vscode-editorWidget-border, #2b2b2b);
+  --tb-fg:        var(--vscode-foreground, #cccccc);
+  --tb-fg-dim:    var(--vscode-descriptionForeground, #8f8f8f);
+  --tb-hover:     var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.09));
+  --tb-divider:   #3a3a3a;
+  --tb-accent:    var(--vscode-focusBorder, #0078d4);
+  --tb-input-bg:  var(--vscode-input-background, #313131);
+  --tb-input-bd:  var(--vscode-input-border, #3c3c3c);
+  --tb-popup-bg:  var(--vscode-editorWidget-background, #252526);
+  --tb-popup-bd:  var(--vscode-widget-border, #3c3c3c);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 35px;
+  padding: 0 8px;
+  background: var(--tb-bg);
+  border-bottom: 1px solid var(--tb-border);
+  color: var(--tb-fg);
+  font-size: 13px;
+  white-space: nowrap;
+  flex: none;
+  position: relative;
+  z-index: 10;
+}
+
+.tb-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--tb-divider);
+  margin: 0 7px;
+  flex: none;
+}
+
+.tb-spacer { flex: 1; }
+
+/* ---- buttons ------------------------------------------------ */
+
+.tb-btn {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--tb-fg);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.tb-btn:hover:not(:disabled) { background: var(--tb-hover); }
+.tb-btn:active:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.tb-btn:focus-visible { outline: 1px solid var(--tb-accent); outline-offset: -1px; }
+.tb-btn:disabled { opacity: 0.35; cursor: default; }
+
+.tb-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* ---- tool group with accent active state -------------------- */
+
+.tool-group { display: flex; align-items: center; gap: 2px; }
+
+.tool-btn.active {
+  background: color-mix(in srgb, var(--tb-accent) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tb-accent) 40%, transparent);
+  color: #ffffff;
+}
+.tool-btn.active:hover {
+  background: color-mix(in srgb, var(--tb-accent) 28%, transparent);
+}
+
+/* ---- page number -------------------------------------------- */
+
+.page-input {
+  width: 34px;
+  height: 22px;
+  margin-left: 4px;
+  background: var(--tb-input-bg);
+  color: var(--vscode-input-foreground, #e6e6e6);
+  border: 1px solid var(--tb-input-bd);
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.page-input:focus { border-color: var(--tb-accent); }
+
+.page-of {
+  font-size: 12px;
+  color: var(--tb-fg-dim);
+  margin-left: 7px;
+  user-select: none;
+}
+
+/* ---- zoom select, styled as a ghost text button -------------- */
+
+.scale-select {
+  height: 26px;
+  margin-left: 2px;
+  padding: 0 24px 0 9px;
+  background: transparent;
+  color: var(--tb-fg);
+  border: 0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f8f8f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 14px 14px;
+  transition: background-color 0.12s ease;
+}
+.scale-select:hover { background-color: var(--tb-hover); }
+.scale-select:focus-visible { outline: 1px solid var(--tb-accent); outline-offset: -1px; }
+.scale-select option { background: var(--tb-popup-bg); color: var(--tb-fg); }
+
+/* ---- pen toggle + popover ------------------------------------ */
+
+.pen-anchor { position: relative; display: flex; align-items: center; }
+
+.pen-toggle {
+  width: auto;
+  padding: 0 7px;
+  margin-left: 4px;
+  color: var(--tb-fg-dim);
+  font-size: 12px;
+}
+.pen-toggle.hidden { display: none; }
+.pen-toggle .caret { width: 13px; height: 13px; stroke: var(--tb-fg-dim); }
+
+.pen-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: #e03131;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.16);
+  flex: none;
+}
+
+.params {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 238px;
+  padding: 12px;
+  background: var(--tb-popup-bg);
+  border: 1px solid var(--tb-popup-bd);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 20;
+}
+.params.hidden { display: none; }
+
+.param-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tb-fg-dim);
+}
+
+.swatch-row { display: flex; gap: 8px; }
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.swatch.selected {
+  box-shadow: 0 0 0 2px var(--tb-popup-bg), 0 0 0 3.5px var(--tb-accent);
+}
+
+.param-row { display: flex; align-items: center; gap: 10px; }
+.param-label { font-size: 12px; color: var(--tb-fg-dim); }
+
+.params input[type="range"] {
+  flex: 1;
+  height: 3px;
+  accent-color: var(--tb-accent);
+  cursor: pointer;
+}
+
+#penSizeReadout {
+  font-size: 12px;
+  color: var(--tb-fg);
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- find bar ------------------------------------------------ */
+
+.find-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--tb-bg);
+  border-bottom: 1px solid var(--tb-border);
+  flex: none;
+  z-index: 9;
+}
+.find-bar.hidden { display: none; }
+
+.find-bar input[type="text"] {
+  width: 220px;
+  height: 24px;
+  background: var(--tb-input-bg);
+  color: var(--vscode-input-foreground, #e6e6e6);
+  border: 1px solid var(--tb-input-bd);
+  border-radius: 3px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+.find-bar input[type="text"]:focus { border-color: var(--tb-accent); }
+
+.find-count {
+  font-size: 12px;
+  color: var(--tb-fg-dim);
+  min-width: 60px;
+}
+
+/* ---- dismissible error banner -------------------------------- */
+
+#error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px 0 14px;
+  background: #3a1d1d;
+  border-bottom: 1px solid #5a2a2a;
+  color: #f1b8b8;
+  font-size: 12px;
+  flex: none;
+}
+#error.hidden { display: none; }
+
+#error .error-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: #e06c6c;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#errorText {
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+#error .error-dismiss {
+  width: 22px;
+  height: 22px;
+  color: #f1b8b8;
+}
+#error .error-dismiss:hover { background: rgba(255, 255, 255, 0.1); }
+#error .error-dismiss svg { width: 14px; height: 14px; stroke-width: 2; }
+
+/* ---- Layout & Sidebar ---------------------------------------- */
+
+#mainContainer {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 230px;
+  background: var(--tb-bg);
+  border-right: 1px solid var(--tb-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 8;
+}
+.sidebar.hidden {
+  display: none;
+}
+
+.sidebar-header {
+  display: flex;
+  border-bottom: 1px solid var(--tb-border);
+  background: var(--tb-popup-bg);
+}
+
+.sidebar-tab {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--tb-fg-dim);
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.sidebar-tab:hover {
+  color: var(--tb-fg);
+  background: var(--tb-hover);
+}
+.sidebar-tab.active {
+  color: #fff;
+  border-bottom-color: var(--tb-accent);
+  background: var(--tb-bg);
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.sidebar-view.hidden {
+  display: none;
+}
+
+.sidebar-empty {
+  font-size: 12px;
+  color: var(--tb-fg-dim);
+  text-align: center;
+  margin-top: 20px;
+}
+
+.outline-list {
+  list-style: none;
+  padding-left: 12px;
+  margin: 0;
+}
+.outline-list:first-child {
+  padding-left: 0;
+}
+
+.outline-item {
+  color: var(--tb-fg);
+  text-decoration: none;
+  font-size: 12px;
+  display: block;
+  padding: 4px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outline-item:hover {
+  background: var(--tb-hover);
+  color: #fff;
+}
+
+.thumbnail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.thumbnail-item:hover {
+  background: var(--tb-hover);
+}
+.thumbnail-item.active {
+  border-color: var(--tb-accent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.thumbnail-canvas {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  background: #fff;
+  max-width: 100%;
+}
+
+.thumbnail-label {
+  font-size: 11px;
+  color: var(--tb-fg-dim);
+  margin-top: 4px;
+}
+
+#viewerWrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#viewerContainer {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+/* Laser pointer overlay: ephemeral strokes drawn above the pages, never
+   part of the document. Hidden from input so it can't block anything. */
+#laserCanvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+#viewer {
+  position: relative;
+  margin: 0 auto;
+  /* Size to the widest page: if pages overflowed this element instead,
+     PDF.js's scrollIntoView would treat #viewer as the scroll target (it
+     looks scrollable via scrollWidth) and page navigation from thumbnails,
+     chapters, and the page input would silently stop working. */
+  width: max-content;
+  min-width: 100%;
+}
+
+.page {
+  margin: 0 auto 12px auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  border: none !important;
+}
+
+/* Touch and Stylus/Pen Input Fixes for Drawing Tablets (XP-Pen, Wacom, Surface Pen, etc.) */
+.annotationEditorLayer,
+.pdfViewer,
+.page,
+.drawLayer {
+  touch-action: none !important;
+}
+
+#app.drawing-tool-active #viewerContainer,
+#app.drawing-tool-active .annotationEditorLayer,
+#app.drawing-tool-active .pdfViewer,
+#app.drawing-tool-active .drawLayer {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* While a drawing tool is active, existing strokes must never grab the
+   pointer: strokes always start on the editor layer itself (accurate
+   coordinates) and annotations cannot be selected or dragged mid-writing. */
+#app.drawing-tool-active .annotationEditorLayer :is(.inkEditor, .freeTextEditor, .stampEditor, .signatureEditor, .highlightEditor) {
+  pointer-events: none !important;
+}
+
+/* Hide the OS cursor over the document while a drawing tool is active; the
+   #drawCursor overlay replaces it (it stays visible while writing with a
+   stylus and shows up in screen recordings). */
+#app.drawing-tool-active #viewerWrapper,
+#app.drawing-tool-active #viewerWrapper * {
+  cursor: none !important;
+}
+
+/* PDF.js ships image cursors for its editing modes (cursor-editorInk.svg is
+   a pen glyph). Screen recorders composite the OS cursor into the video on
+   their own, even at moments when Windows hides it on screen during pen
+   input, so an image cursor can surface in a finished recording as a second,
+   larger pen next to the #drawCursor overlay. Replace them all with plain
+   named cursors so a pen-shaped OS cursor can never exist; the overlay is
+   the only pen icon. This file loads after pdf_viewer.css, so these :root
+   definitions win on source order. */
+:root {
+  --editorFreeText-editing-cursor: text;
+  --editorInk-editing-cursor: crosshair;
+  --editorHighlight-editing-cursor: text;
+  --editorFreeHighlight-editing-cursor: crosshair;
+  --draw-cursor: crosshair;
+}
+
+.draw-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1000;
+  will-change: transform;
+}
+.draw-cursor.hidden { display: none; }
+
+/* Pen glyph cursor: the path tip sits at (2,22) of the 24px viewBox, so
+   offset the icon to put that tip exactly on the pointer position. */
+.draw-cursor .pen-glyph {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: -1.8px;
+  top: -20.2px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.draw-cursor .pen-tip-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  left: -2px;
+  top: -2px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Highlighter strokes blend like a real marker: the page text (part of the
+   rendered canvas) stays readable "through" the ink. Pen strokes are fully
+   opaque, so this only targets translucent ink. Darken (not multiply) so
+   overlapping strokes converge instead of compounding; main.js swaps in
+   "lighten" per stroke over dark backgrounds. */
+.canvasWrapper svg.draw:not([stroke-opacity="1"]) {
+  mix-blend-mode: darken;
+}
+
+/* PDF.js shows a floating mini toolbar (color/delete) on the selected
+   stroke; while our drawing tools are active nothing should be selected,
+   and the popup gets in the way of writing. main.js unselects on the next
+   microtask; these rules make sure no selection chrome can even flash —
+   outline, resize handles, delete/alt-text buttons. */
+#app.drawing-tool-active .editToolbar,
+#app.drawing-tool-active .annotationEditorLayer .resizers,
+#app.drawing-tool-active .annotationEditorLayer .selectedEditor > button,
+#app.drawing-tool-active .annotationEditorLayer .altText {
+  display: none !important;
+}
+#app.drawing-tool-active .annotationEditorLayer .selectedEditor {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Eraser mode selector in the eraser popover */
+.eraser-modes { gap: 6px; }
+.mode-btn {
+  flex: 1;
+  height: 26px;
+  border: 1px solid var(--tb-input-bd);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tb-fg-dim);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.mode-btn:hover { background: var(--tb-hover); color: var(--tb-fg); }
+.mode-btn.active {
+  background: color-mix(in srgb, var(--tb-accent) 20%, transparent);
+  border-color: var(--tb-accent);
+  color: #fff;
+}

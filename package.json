@@ -1,0 +1,67 @@
+{
+  "name": "pdf-pen-annotator",
+  "publisher": "local",
+  "displayName": "PDF Pen Annotator",
+  "description": "Draw and highlight on PDFs with mouse or stylus, directly in VS Code",
+  "icon": "media/icon.png",
+  "author": {
+    "name": "KGP Talkie",
+    "url": "https://www.youtube.com/kgptalkie"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laxmimerit/pdf-pen-annotator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/laxmimerit/pdf-pen-annotator/issues"
+  },
+  "homepage": "https://github.com/laxmimerit/pdf-pen-annotator#readme",
+  "galleryBanner": {
+    "color": "#1e2430",
+    "theme": "dark"
+  },
+  "keywords": [
+    "pdf",
+    "annotate",
+    "annotation",
+    "pen",
+    "stylus",
+    "ink",
+    "draw",
+    "highlighter",
+    "eraser",
+    "laser pointer",
+    "teaching",
+    "notes",
+    "tablet"
+  ],
+  "version": "0.0.3",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCustomEditor:pdfAnnotator.editor"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "pdfAnnotator.editor",
+        "displayName": "PDF Pen Annotator",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  }
+}

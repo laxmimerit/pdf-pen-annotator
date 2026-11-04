@@ -1,0 +1,12 @@
+dev/**
+.claude/**
+.vscode/**
+.github/**
+.git/**
+.gitignore
+**/*.map
+*.vsix
+vsix/**
+media/readme/**
+debug.log
+PROMPT-LOG.md
